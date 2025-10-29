@@ -1,0 +1,49 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=lavent_dev
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  lavent-auth-service:
+    build: ./services/auth-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/lavent_dev
+      - JWT_SECRET=supersecret_jwt_key
+      - PORT=4000
+    depends_on:
+      - db
+    ports:
+      - "4000:4000"
+
+  lavent-crm-service:
+    build: ./services/crm-service
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/lavent_dev
+      - JWT_SECRET=supersecret_jwt_key
+      - PORT=5000
+    depends_on:
+      - db
+      - lavent-auth-service
+    ports:
+      - "5000:5000"
+
+  web:
+    build: ./apps/web-client
+    environment:
+      - REACT_APP_AUTH_URL=http://localhost:4000
+      - REACT_APP_CRM_URL=http://localhost:5000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - lavent-auth-service
+      - lavent-crm-service
+
+volumes:
+  db_data:
